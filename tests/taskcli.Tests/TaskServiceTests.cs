@@ -53,4 +53,33 @@ public class TaskServiceTests : IDisposable
         Assert.Equal(2, second.Id);
         Assert.NotEqual(first.Id, second.Id);
     }
+
+    [Fact]
+    public void List_ReturnsTasksInAscendingIdOrder()
+    {
+        string storagePath = Path.Combine(_tempDirectory, "tasks.json");
+        var repository = new TaskRepository(storagePath);
+        repository.Save(new TaskStore
+        {
+            NextId = 3,
+            Tasks =
+            {
+                new TaskItem { Id = 2, Description = "Second", Status = TaskState.Completed },
+                new TaskItem { Id = 1, Description = "First", Status = TaskState.Pending }
+            }
+        });
+
+        IReadOnlyList<TaskItem> tasks = _service.List();
+
+        Assert.Equal(new[] { 1, 2 }, tasks.Select(task => task.Id));
+    }
+
+    [Fact]
+    public void List_WhenStorageIsMissing_ReturnsEmptyWithoutCreatingStorage()
+    {
+        IReadOnlyList<TaskItem> tasks = _service.List();
+
+        Assert.Empty(tasks);
+        Assert.False(Directory.Exists(_tempDirectory));
+    }
 }

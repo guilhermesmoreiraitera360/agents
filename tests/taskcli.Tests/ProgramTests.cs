@@ -42,6 +42,87 @@ public class ProgramTests : IDisposable
     }
 
     [Fact]
+    public void Run_ListWithTasks_PrintsTasksInIdOrderWithStatusAndReturnsZero()
+    {
+        var repository = new TaskRepository(_storagePath);
+        repository.Save(new TaskStore
+        {
+            NextId = 3,
+            Tasks =
+            {
+                new TaskItem { Id = 2, Description = "Second", Status = TaskState.Completed },
+                new TaskItem { Id = 1, Description = "First", Status = TaskState.Pending }
+            }
+        });
+        string storedJsonBeforeList = File.ReadAllText(_storagePath);
+
+        var stdout = new StringWriter();
+        var originalOut = Console.Out;
+        Console.SetOut(stdout);
+        try
+        {
+            int exitCode = Program.Run(new[] { "list" }, _storagePath);
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal(
+                $"1: First [pending]{Environment.NewLine}2: Second [completed]",
+                stdout.ToString().TrimEnd());
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+        }
+
+        Assert.Equal(storedJsonBeforeList, File.ReadAllText(_storagePath));
+    }
+
+    [Fact]
+    public void Run_ListWithEmptyStorage_PrintsEmptyStateAndReturnsZeroWithoutCreatingFile()
+    {
+        var stdout = new StringWriter();
+        var originalOut = Console.Out;
+        Console.SetOut(stdout);
+        try
+        {
+            int exitCode = Program.Run(new[] { "list" }, _storagePath);
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("No tasks found.", stdout.ToString().Trim());
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+        }
+
+        Assert.False(File.Exists(_storagePath));
+        Assert.False(Directory.Exists(_tempDirectory));
+    }
+
+    [Fact]
+    public void Run_ListWithCorruptStorage_PrintsErrorAndReturnsOneWithoutChangingFile()
+    {
+        Directory.CreateDirectory(_tempDirectory);
+        File.WriteAllText(_storagePath, "{ not valid json ");
+
+        var stderr = new StringWriter();
+        var originalError = Console.Error;
+        Console.SetError(stderr);
+        try
+        {
+            int exitCode = Program.Run(new[] { "list" }, _storagePath);
+
+            Assert.Equal(1, exitCode);
+            Assert.Contains("Error:", stderr.ToString());
+        }
+        finally
+        {
+            Console.SetError(originalError);
+        }
+
+        Assert.Equal("{ not valid json ", File.ReadAllText(_storagePath));
+    }
+
+    [Fact]
     public void Run_AddWithEmptyDescription_PrintsErrorAndReturnsOne()
     {
         var stderr = new StringWriter();

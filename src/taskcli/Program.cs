@@ -36,9 +36,37 @@ public class Program
         {
             case "add":
                 return HandleAdd(service, args);
+            case "list":
+                return HandleList(service);
             default:
                 Console.Error.WriteLine($"Unrecognized command: '{verb}'. Usage: taskcli <command> [arguments]");
                 return 1;
+        }
+    }
+
+    private static int HandleList(TaskService service)
+    {
+        try
+        {
+            IReadOnlyList<TaskItem> tasks = service.List();
+            if (tasks.Count == 0)
+            {
+                Console.WriteLine("No tasks found.");
+                return 0;
+            }
+
+            foreach (TaskItem task in tasks)
+            {
+                string status = task.Status.ToString().ToLowerInvariant();
+                Console.WriteLine($"{task.Id}: {task.Description} [{status}]");
+            }
+
+            return 0;
+        }
+        catch (TaskStorageException ex)
+        {
+            Console.Error.WriteLine($"Error: {ex.Message}");
+            return 1;
         }
     }
 
