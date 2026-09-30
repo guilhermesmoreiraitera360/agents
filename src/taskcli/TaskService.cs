@@ -14,6 +14,14 @@ public class TaskService
     }
 
     /// <summary>
+    /// Returns all tasks ordered by ascending ID without modifying storage.
+    /// </summary>
+    public IReadOnlyList<TaskItem> List()
+    {
+        return _repository.Load().Tasks.OrderBy(task => task.Id).ToArray();
+    }
+
+    /// <summary>
     /// Creates a new pending task with the given description, persists it,
     /// and returns the created task.
     /// </summary>
